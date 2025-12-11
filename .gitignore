@@ -18,3 +18,4 @@ attendance_report.txt
 
 # Logs
 *.log
+.gemini/
