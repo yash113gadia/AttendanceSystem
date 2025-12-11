@@ -1,0 +1,1 @@
+Backup of attendance_data.txt taken before resetting all attendance to 0.

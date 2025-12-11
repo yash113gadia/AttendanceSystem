@@ -1,0 +1,34 @@
+M.Tech (Artificial Intelligence)|MON|9:10-10:10|VAC|SHM|306D
+M.Tech (Artificial Intelligence)|MON|10:10-11:10|DSA-I|SHM|306D
+M.Tech (Artificial Intelligence)|MON|11:10-12:10|OS LAB|RSB-AKS|402D
+M.Tech (Artificial Intelligence)|MON|1:30-2:30|DSA-I LAB|SHM-SWT|D-203
+M.Tech (Artificial Intelligence)|MON|2:30-3:30|AIC|DRV|306D
+M.Tech (Artificial Intelligence)|MON|3:30-4:30|R&P|SHM|306D
+M.Tech (Artificial Intelligence)|TUE|9:10-10:10|AIC|DRV|306D
+M.Tech (Artificial Intelligence)|TUE|10:10-11:10|VAC|SHM|306D
+M.Tech (Artificial Intelligence)|TUE|11:10-12:10|OOTS|ADM|305D
+M.Tech (Artificial Intelligence)|TUE|12:10-1:10|OS|RSB|305D
+M.Tech (Artificial Intelligence)|TUE|1:30-2:30|DSA-I|SHM|104D
+M.Tech (Artificial Intelligence)|TUE|2:30-3:30|TC|BNM|104D
+M.Tech (Artificial Intelligence)|TUE|3:30-4:30|CAPP|CHC|105D
+M.Tech (Artificial Intelligence)|WED|9:10-10:10|R&P|SHM|306D
+M.Tech (Artificial Intelligence)|WED|10:10-11:10|OS|RSB|306D
+M.Tech (Artificial Intelligence)|WED|11:10-12:10|TC|BNM|104D
+M.Tech (Artificial Intelligence)|WED|12:10-1:10|CAPP|CHC|104D
+M.Tech (Artificial Intelligence)|WED|1:30-2:30|DSA-I LAB|SHM-ANK|402D
+M.Tech (Artificial Intelligence)|WED|2:30-3:30|AI LAB|RSP-DPG|B102D
+M.Tech (Artificial Intelligence)|WED|3:30-4:30|AI|RSP|105D
+M.Tech (Artificial Intelligence)|THU|9:10-10:10|SHM/RSB (Special)|SHM|306D
+M.Tech (Artificial Intelligence)|THU|10:10-11:10|AI|RSB|306D
+M.Tech (Artificial Intelligence)|THU|11:10-12:10|AIC|DRV|306D
+M.Tech (Artificial Intelligence)|THU|12:10-1:10|OS LAB|RSB-NZM|402D
+M.Tech (Artificial Intelligence)|THU|1:30-2:30|M.M|SHM|306D
+M.Tech (Artificial Intelligence)|THU|2:30-3:30|DSA-I|SHM|306D
+M.Tech (Artificial Intelligence)|THU|3:30-4:30|INTERNSHIP|ASH-ANU|107D
+M.Tech (Artificial Intelligence)|FRI|9:10-10:10|OS|RSB|306D
+M.Tech (Artificial Intelligence)|FRI|10:10-11:10|DSA-I|SHM|306D
+M.Tech (Artificial Intelligence)|FRI|11:10-12:10|ESD-1|RSB|?
+M.Tech (Artificial Intelligence)|FRI|1:30-2:30|OOTS|ADM|105D
+M.Tech (Artificial Intelligence)|FRI|2:30-3:30|CAPP|CHC|105D
+M.Tech (Artificial Intelligence)|FRI|3:30-4:30|TRAINING & EVENTS|?|?
+M.Tech (Artificial Intelligence)|FRI|3:30-4:30|304D|?|304D
