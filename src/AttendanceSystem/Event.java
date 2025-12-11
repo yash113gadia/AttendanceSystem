@@ -12,8 +12,9 @@ public class Event implements Serializable {
     private String location;
     private String organizer; // Teacher username
     private String status; // "PENDING", "APPROVED", "REJECTED"
+    private String affectedSessions; // Comma-separated list of "TIME#SUBJECT" or just "TIME" or keys
 
-    public Event(String title, String description, String date, String time, String location, String organizer) {
+    public Event(String title, String description, String date, String time, String location, String organizer, String affectedSessions) {
         this.id = UUID.randomUUID().toString();
         this.title = title;
         this.description = description;
@@ -22,10 +23,11 @@ public class Event implements Serializable {
         this.location = location;
         this.organizer = organizer;
         this.status = "PENDING"; // Default status
+        this.affectedSessions = affectedSessions;
     }
 
     // Constructor for loading from file
-    public Event(String id, String title, String description, String date, String time, String location, String organizer, String status) {
+    public Event(String id, String title, String description, String date, String time, String location, String organizer, String status, String affectedSessions) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -34,6 +36,7 @@ public class Event implements Serializable {
         this.location = location;
         this.organizer = organizer;
         this.status = status;
+        this.affectedSessions = affectedSessions;
     }
 
     public String getId() { return id; }
@@ -44,6 +47,7 @@ public class Event implements Serializable {
     public String getLocation() { return location; }
     public String getOrganizer() { return organizer; }
     public String getStatus() { return status; }
+    public String getAffectedSessions() { return affectedSessions; }
     
     public void setStatus(String status) { this.status = status; }
 
@@ -51,13 +55,15 @@ public class Event implements Serializable {
         // Escape pipes
         String safeTitle = title.replace("|", " ");
         String safeDesc = description.replace("|", " ");
-        return id + "|" + safeTitle + "|" + safeDesc + "|" + date + "|" + time + "|" + location + "|" + organizer + "|" + status;
+        String safeAffected = affectedSessions == null ? "" : affectedSessions;
+        return id + "|" + safeTitle + "|" + safeDesc + "|" + date + "|" + time + "|" + location + "|" + organizer + "|" + status + "|" + safeAffected;
     }
 
     public static Event fromFileString(String line) {
-        String[] parts = line.split("\\");
+        String[] parts = line.split("|");
         if (parts.length >= 8) {
-            return new Event(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]);
+            String affected = parts.length > 8 ? parts[8] : "";
+            return new Event(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], affected);
         }
         return null;
     }

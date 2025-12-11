@@ -35,11 +35,11 @@ public class AssignmentPanel extends BasePanel {
         toolbar.add(Box.createHorizontalStrut(20));
 
         if ("TEACHER".equals(currentUser.getRole())) {
-            JButton createBtn = DesignSystem.createButton("Create Assignment", DesignSystem.PRIMARY, Color.WHITE);
+            JButton createBtn = DesignSystem.createButton("Create Assignment", DesignSystem.PRIMARY);
             createBtn.addActionListener(e -> showCreateDialog());
             toolbar.add(createBtn);
         } else if ("STUDENT".equals(currentUser.getRole())) {
-            JButton uploadBtn = DesignSystem.createButton("Upload Submission", DesignSystem.PRIMARY, Color.WHITE);
+            JButton uploadBtn = DesignSystem.createButton("Upload Submission", DesignSystem.PRIMARY);
             uploadBtn.addActionListener(e -> showUploadDialog());
             toolbar.add(uploadBtn);
         }
@@ -91,8 +91,8 @@ public class AssignmentPanel extends BasePanel {
         // Action Panel for submissions
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionPanel.setBackground(Color.WHITE);
-        JButton approveBtn = DesignSystem.createButton("Approve", DesignSystem.SUCCESS, Color.WHITE);
-        JButton rejectBtn = DesignSystem.createButton("Reject", DesignSystem.DANGER, Color.WHITE);
+        JButton approveBtn = DesignSystem.createButton("Approve", DesignSystem.SUCCESS);
+        JButton rejectBtn = DesignSystem.createButton("Reject", DesignSystem.DANGER);
         
         approveBtn.addActionListener(e -> processSubmission("APPROVED"));
         rejectBtn.addActionListener(e -> processSubmission("REJECTED"));
@@ -120,7 +120,6 @@ public class AssignmentPanel extends BasePanel {
         DesignSystem.styleTable(assignmentTable);
 
         JScrollPane scroll = new JScrollPane(assignmentTable);
-        DesignSystem.createCard(scroll); // Wrap in card style if possible, or just add
         add(scroll, BorderLayout.CENTER);
     }
 

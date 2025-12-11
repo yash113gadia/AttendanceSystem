@@ -1,6 +1,10 @@
 package AttendanceSystem.ui;
 
-import AttendanceSystem.*;
+import AttendanceSystem.AttendanceSystem;
+import AttendanceSystem.Event;
+import AttendanceSystem.EventPhoto;
+import AttendanceSystem.User;
+import AttendanceSystem.ClassSession;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
@@ -28,6 +32,8 @@ public class EventPanel extends BasePanel {
         removeAll();
         setLayout(new BorderLayout(DesignSystem.SPACING_MD, DesignSystem.SPACING_MD));
         setBackground(DesignSystem.BACKGROUND);
+        
+        System.out.println("DEBUG: EventPanel initialized for user: " + currentUser.getUsername() + ", Role: " + currentUser.getRole());
 
         // Top Toolbar
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -40,12 +46,12 @@ public class EventPanel extends BasePanel {
         toolbar.add(Box.createHorizontalStrut(20));
 
         if ("TEACHER".equals(currentUser.getRole())) {
-            JButton createBtn = DesignSystem.createButton("Create Event", DesignSystem.PRIMARY, Color.WHITE);
+            JButton createBtn = DesignSystem.createButton("Create Event", DesignSystem.PRIMARY);
             createBtn.addActionListener(e -> showCreateDialog());
             toolbar.add(createBtn);
         } else if ("ADMIN".equals(currentUser.getRole())) {
-            JButton approveBtn = DesignSystem.createButton("Approve Event", DesignSystem.SUCCESS, Color.WHITE);
-            JButton rejectBtn = DesignSystem.createButton("Reject Event", DesignSystem.DANGER, Color.WHITE);
+            JButton approveBtn = DesignSystem.createButton("Approve Event", DesignSystem.SUCCESS);
+            JButton rejectBtn = DesignSystem.createButton("Reject Event", DesignSystem.DANGER);
             
             approveBtn.addActionListener(e -> processEvent("APPROVED"));
             rejectBtn.addActionListener(e -> processEvent("REJECTED"));
@@ -53,7 +59,7 @@ public class EventPanel extends BasePanel {
             toolbar.add(approveBtn);
             toolbar.add(rejectBtn);
         } else if ("STUDENT".equals(currentUser.getRole())) {
-            JButton uploadBtn = DesignSystem.createButton("Upload Photo", DesignSystem.PRIMARY, Color.WHITE);
+            JButton uploadBtn = DesignSystem.createButton("Upload Photo", DesignSystem.PRIMARY);
             uploadBtn.addActionListener(e -> showUploadDialog());
             toolbar.add(uploadBtn);
         }
@@ -256,6 +262,32 @@ public class EventPanel extends BasePanel {
     private void updatePhotoStatus(EventPhoto p, String status) {
         p.setStatus(status);
         system.updateEventPhoto(p);
+        
+        // If Approved, Mark Attendance for affected sessions
+        if ("APPROVED".equals(status)) {
+            // Get event to find affected sessions
+            Event event = null;
+            for (Event e : system.getAllEvents()) {
+                if (e.getId().equals(p.getEventId())) {
+                    event = e;
+                    break;
+                }
+            }
+            
+            if (event != null && event.getAffectedSessions() != null && !event.getAffectedSessions().isEmpty()) {
+                String[] sessions = event.getAffectedSessions().split(",");
+                for (String sKey : sessions) {
+                    // Key format: TIME#SUBJECT
+                    // Full key for attendance: DATE#TIME#SUBJECT
+                    String fullKey = event.getDate() + "#" + sKey;
+                    
+                    // Mark attendance
+                    system.markAttendanceForSession(p.getStudentId(), fullKey, true);
+                }
+                JOptionPane.showMessageDialog(this, "Attendance marked for " + sessions.length + " sessions!");
+            }
+        }
+        
         loadPhotosForSelectedEvent(); // Refresh UI
     }
 
@@ -265,13 +297,45 @@ public class EventPanel extends BasePanel {
         JTextField dateField = new JTextField("2025-12-");
         JTextField timeField = new JTextField("10:00 AM");
         JTextField locField = new JTextField("Auditorium");
+        
+        // Session Selector
+        DefaultListModel<String> sessionModel = new DefaultListModel<>();
+        JList<String> sessionList = new JList<>(sessionModel);
+        sessionList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        JScrollPane sessionScroll = new JScrollPane(sessionList);
+        sessionScroll.setPreferredSize(new Dimension(200, 100));
+        sessionScroll.setBorder(BorderFactory.createTitledBorder("Select Sessions to Replace"));
+        
+        // Populate sessions when date changes (simplified: load all first, filter later?)
+        // Or just load generic "Day" sessions. 
+        // For prototype: Add a "Load Sessions" button
+        JButton loadSessionsBtn = new JButton("Load Sessions for Date");
+        loadSessionsBtn.addActionListener(e -> {
+            String date = dateField.getText();
+            sessionModel.clear();
+            try {
+                java.time.LocalDate ld = java.time.LocalDate.parse(date);
+                String dayStr = ld.getDayOfWeek().toString().substring(0, 3);
+                for (ClassSession s : system.getSessionsByDay(dayStr, "All Courses")) {
+                    // Display: TIME - SUBJECT (TEACHER)
+                    sessionModel.addElement(s.getTimeSlot() + "#" + s.getSubject() + " (" + s.getTeacher() + ")");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Invalid Date Format (YYYY-MM-DD)");
+            }
+        });
 
-        JPanel panel = new JPanel(new GridLayout(5, 2, 5, 5));
-        panel.add(new JLabel("Title:")); panel.add(titleField);
-        panel.add(new JLabel("Description:")); panel.add(descField);
-        panel.add(new JLabel("Date (YYYY-MM-DD):")); panel.add(dateField);
-        panel.add(new JLabel("Time:")); panel.add(timeField);
-        panel.add(new JLabel("Location:")); panel.add(locField);
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        JPanel fieldsPanel = new JPanel(new GridLayout(6, 2, 5, 5));
+        fieldsPanel.add(new JLabel("Title:")); fieldsPanel.add(titleField);
+        fieldsPanel.add(new JLabel("Description:")); fieldsPanel.add(descField);
+        fieldsPanel.add(new JLabel("Date (YYYY-MM-DD):")); fieldsPanel.add(dateField);
+        fieldsPanel.add(new JLabel("Time:")); fieldsPanel.add(timeField);
+        fieldsPanel.add(new JLabel("Location:")); fieldsPanel.add(locField);
+        fieldsPanel.add(new JLabel("")); fieldsPanel.add(loadSessionsBtn);
+        
+        panel.add(fieldsPanel, BorderLayout.NORTH);
+        panel.add(sessionScroll, BorderLayout.CENTER);
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Create Event", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
@@ -280,13 +344,28 @@ public class EventPanel extends BasePanel {
                 return;
             }
             
+            // Collect selected sessions
+            List<String> selected = sessionList.getSelectedValuesList();
+            StringBuilder sb = new StringBuilder();
+            for (String s : selected) {
+                // Parse out "TIME#SUBJECT" from "TIME#SUBJECT (TEACHER)"
+                // Actually we just stored "TIME#SUBJECT..." in the model value display.
+                // We'll store the exact string needed for the key: "TIME#SUBJECT"
+                // Model element: "10:00-11:00#Math (Mr. X)"
+                String key = s.split(" \\(")[0]; // "10:00-11:00#Math"
+                sb.append(key).append(",");
+            }
+            String affected = sb.toString();
+            if (affected.length() > 0) affected = affected.substring(0, affected.length() - 1);
+            
             Event event = new Event(
                 titleField.getText(),
                 descField.getText(),
                 dateField.getText(),
                 timeField.getText(),
                 locField.getText(),
-                currentUser.getUsername()
+                currentUser.getUsername(),
+                affected
             );
             system.addEvent(event);
             refreshData();
