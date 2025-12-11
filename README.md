@@ -99,8 +99,8 @@ java -cp bin AttendanceSystem.AttendanceManagementGUI
 ### Admin Accounts
 | Username     | Password    |
 |--------------|-------------|
-| YASHGADIA    | 9v2vcurog   |
-| SWETAKUMARI  | ChocoLava   |
+| YASHGADIA    | *********   |
+| SWETAKUMARI  | **********  |
 
 ### Teacher Accounts
 | Username | Password | Subjects                |
