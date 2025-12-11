@@ -52,7 +52,17 @@ public class MainGUI extends JFrame {
         initComponents();
 
         // Start stats update timer (every 5 seconds)
-        statsTimer = new javax.swing.Timer(5000, e -> updateHeaderStats());
+        statsTimer = new javax.swing.Timer(5000, e -> {
+            updateHeaderStats();
+            system.reloadData(); // Refresh data from file
+            
+            // Refresh current panel if visible
+            for (BasePanel panel : panels.values()) {
+                if (panel.isVisible()) {
+                    panel.onShow(); // This triggers refresh
+                }
+            }
+        });
         statsTimer.start();
     }
     

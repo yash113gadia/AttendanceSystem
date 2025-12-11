@@ -1,41 +1,39 @@
 package AttendanceSystem.ui;
 
 import java.awt.*;
-import java.awt.event.*;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import java.util.stream.IntStream;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 /**
- * Robust and user-friendly Date Picker Dialog.
+ * Simple Dropdown Date Picker Dialog.
  */
 public class DatePickerDialog extends JDialog {
     
-    // State
-    private LocalDate selectedDate; // The date the user has clicked
-    private YearMonth currentView;  // The month currently displayed
+    private LocalDate selectedDate;
     private boolean confirmed = false;
     
-    // UI Components
-    private JPanel calendarPanel;
+    // Components
+    private JComboBox<Integer> dayCombo;
     private JComboBox<String> monthCombo;
-    private JSpinner yearSpinner;
-    private boolean isProgrammaticChange = false;
+    private JComboBox<Integer> yearCombo;
+    
+    private boolean isUpdating = false;
 
     public DatePickerDialog(Window owner, LocalDate initialDate) {
         super(owner, "Select Date", ModalityType.APPLICATION_MODAL);
         
         this.selectedDate = (initialDate != null) ? initialDate : LocalDate.now();
-        this.currentView = YearMonth.from(this.selectedDate);
         
         initComponents();
         
-        setSize(320, 380);
+        // Compact size
+        setSize(320, 180);
         setLocationRelativeTo(owner);
         setResizable(false);
     }
@@ -43,94 +41,70 @@ public class DatePickerDialog extends JDialog {
     private void initComponents() {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.WHITE);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        // 1. Navigation Panel (Month/Year controls)
-        JPanel navPanel = new JPanel(new GridBagLayout());
-        navPanel.setBackground(DesignSystem.PRIMARY);
-        navPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        // --- Selector Panel ---
+        JPanel pickerPanel = new JPanel(new GridLayout(2, 3, 10, 5));
+        pickerPanel.setBackground(Color.WHITE);
         
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        // Labels
+        JLabel dLbl = new JLabel("Day");
+        dLbl.setFont(DesignSystem.FONT_SMALL);
+        dLbl.setForeground(DesignSystem.TEXT_SECONDARY);
         
-        // Prev Month Button
-        JButton prevBtn = createArrowButton("<");
-        prevBtn.addActionListener(e -> {
-            currentView = currentView.minusMonths(1);
-            updateView();
-        });
+        JLabel mLbl = new JLabel("Month");
+        mLbl.setFont(DesignSystem.FONT_SMALL);
+        mLbl.setForeground(DesignSystem.TEXT_SECONDARY);
         
-        // Next Month Button
-        JButton nextBtn = createArrowButton(">");
-        nextBtn.addActionListener(e -> {
-            currentView = currentView.plusMonths(1);
-            updateView();
-        });
+        JLabel yLbl = new JLabel("Year");
+        yLbl.setFont(DesignSystem.FONT_SMALL);
+        yLbl.setForeground(DesignSystem.TEXT_SECONDARY);
         
-        // Month Combo
-        String[] months = new String[12];
-        for (int i = 0; i < 12; i++) {
-            months[i] = Month.of(i+1).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+        pickerPanel.add(dLbl);
+        pickerPanel.add(mLbl);
+        pickerPanel.add(yLbl);
+        
+        // Combos
+        dayCombo = new JComboBox<>();
+        monthCombo = new JComboBox<>();
+        yearCombo = new JComboBox<>();
+        
+        // Populate Months
+        for (Month m : Month.values()) {
+            monthCombo.addItem(m.getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
         }
-        monthCombo = new JComboBox<>(months);
-        monthCombo.setFont(DesignSystem.FONT_BODY_BOLD);
-        monthCombo.setFocusable(false);
-        monthCombo.addActionListener(e -> {
-            if (isProgrammaticChange) return;
-            int monthIndex = monthCombo.getSelectedIndex() + 1;
-            currentView = currentView.withMonth(monthIndex);
-            updateView();
-        });
         
-        // Year Spinner
-        yearSpinner = new JSpinner(new SpinnerNumberModel(currentView.getYear(), 1900, 2100, 1));
-        yearSpinner.setFont(DesignSystem.FONT_BODY_BOLD);
-        JComponent editor = yearSpinner.getEditor();
-        if (editor instanceof JSpinner.DefaultEditor) {
-            ((JSpinner.DefaultEditor)editor).getTextField().setFocusable(false);
+        // Populate Years (Current -10 to +10)
+        int currentYear = LocalDate.now().getYear();
+        for (int y = currentYear - 5; y <= currentYear + 5; y++) {
+            yearCombo.addItem(y);
         }
-        yearSpinner.addChangeListener(e -> {
-            if (isProgrammaticChange) return;
-            int year = (Integer) yearSpinner.getValue();
-            currentView = currentView.withYear(year);
-            updateView();
-        });
         
-        // Layout Navigation
-        gbc.weightx = 0.1;
-        gbc.gridx = 0; navPanel.add(prevBtn, gbc);
+        // Setup Listeners
+        monthCombo.addActionListener(e -> updateDays());
+        yearCombo.addActionListener(e -> updateDays());
         
-        gbc.weightx = 0.4;
-        gbc.insets = new Insets(0, 5, 0, 5);
-        gbc.gridx = 1; navPanel.add(monthCombo, gbc);
-        gbc.gridx = 2; navPanel.add(yearSpinner, gbc);
+        // Style Combos
+        styleCombo(dayCombo);
+        styleCombo(monthCombo);
+        styleCombo(yearCombo);
         
-        gbc.weightx = 0.1;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        gbc.gridx = 3; navPanel.add(nextBtn, gbc);
+        pickerPanel.add(dayCombo);
+        pickerPanel.add(monthCombo);
+        pickerPanel.add(yearCombo);
         
-        mainPanel.add(navPanel, BorderLayout.NORTH);
+        mainPanel.add(pickerPanel, BorderLayout.CENTER);
         
-        // 2. Calendar Grid
-        calendarPanel = new JPanel(new GridLayout(0, 7, 2, 2));
-        calendarPanel.setBackground(Color.WHITE);
-        calendarPanel.setBorder(new EmptyBorder(10, 15, 10, 15));
-        
-        mainPanel.add(calendarPanel, BorderLayout.CENTER);
-        
-        // 3. Footer (Buttons)
+        // --- Footer ---
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         footerPanel.setBackground(Color.WHITE);
-        footerPanel.setBorder(new EmptyBorder(5, 10, 10, 10));
         
         JButton cancelBtn = new JButton("Cancel");
         cancelBtn.addActionListener(e -> dispose());
         styleButton(cancelBtn, Color.WHITE, DesignSystem.TEXT_PRIMARY);
         
         JButton okBtn = new JButton("OK");
-        okBtn.addActionListener(e -> {
-            confirmed = true;
-            dispose();
-        });
+        okBtn.addActionListener(e -> confirmSelection());
         styleButton(okBtn, DesignSystem.PRIMARY, Color.WHITE);
         
         footerPanel.add(cancelBtn);
@@ -140,97 +114,59 @@ public class DatePickerDialog extends JDialog {
         
         setContentPane(mainPanel);
         
-        // Initial render
-        updateView();
+        // Set Initial Values
+        setValuesFromDate(selectedDate);
     }
     
-    private void updateView() {
-        isProgrammaticChange = true;
-        monthCombo.setSelectedIndex(currentView.getMonthValue() - 1);
-        yearSpinner.setValue(currentView.getYear());
-        isProgrammaticChange = false;
+    private void setValuesFromDate(LocalDate date) {
+        isUpdating = true;
+        yearCombo.setSelectedItem(date.getYear());
+        monthCombo.setSelectedIndex(date.getMonthValue() - 1);
+        isUpdating = false;
         
-        calendarPanel.removeAll();
+        updateDays(); // Populate days for this month/year
         
-        // Weekday Headers
-        String[] days = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
-        for (String day : days) {
-            JLabel lbl = new JLabel(day, SwingConstants.CENTER);
-            lbl.setFont(DesignSystem.FONT_BODY_BOLD);
-            lbl.setForeground(DesignSystem.TEXT_SECONDARY);
-            calendarPanel.add(lbl);
+        dayCombo.setSelectedItem(date.getDayOfMonth());
+    }
+    
+    private void updateDays() {
+        if (isUpdating) return;
+        
+        Integer selectedDay = (Integer) dayCombo.getSelectedItem();
+        int year = (Integer) yearCombo.getSelectedItem();
+        int month = monthCombo.getSelectedIndex() + 1;
+        
+        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+        
+        DefaultComboBoxModel<Integer> model = new DefaultComboBoxModel<>();
+        for (int i = 1; i <= daysInMonth; i++) {
+            model.addElement(i);
         }
+        dayCombo.setModel(model);
         
-        // Days
-        LocalDate firstOfMonth = currentView.atDay(1);
-        int dayOfWeek = firstOfMonth.getDayOfWeek().getValue() % 7; // Su=0, Mo=1...
-        
-        // Padding for previous month
-        for (int i = 0; i < dayOfWeek; i++) {
-            calendarPanel.add(new JLabel(""));
-        }
-        
-        int lengthOfMonth = currentView.lengthOfMonth();
-        for (int i = 1; i <= lengthOfMonth; i++) {
-            int day = i;
-            JButton dayBtn = new JButton(String.valueOf(day));
-            LocalDate date = currentView.atDay(day);
-            
-            // Style
-            dayBtn.setFocusPainted(false);
-            dayBtn.setBorderPainted(false);
-            dayBtn.setOpaque(true);
-            
-            if (date.equals(selectedDate)) {
-                dayBtn.setBackground(DesignSystem.PRIMARY);
-                dayBtn.setForeground(Color.WHITE);
-            } else if (date.equals(LocalDate.now())) {
-                dayBtn.setBackground(DesignSystem.PRIMARY_LIGHT);
-                dayBtn.setForeground(DesignSystem.PRIMARY);
+        // Restore selection if valid, else clamp
+        if (selectedDay != null) {
+            if (selectedDay <= daysInMonth) {
+                dayCombo.setSelectedItem(selectedDay);
             } else {
-                dayBtn.setBackground(Color.WHITE);
-                dayBtn.setForeground(DesignSystem.TEXT_PRIMARY);
+                dayCombo.setSelectedItem(daysInMonth);
             }
-            
-            dayBtn.addMouseListener(new MouseAdapter() {
-                public void mouseEntered(MouseEvent e) {
-                    if (!date.equals(selectedDate)) {
-                        dayBtn.setBackground(DesignSystem.BACKGROUND);
-                    }
-                }
-                public void mouseExited(MouseEvent e) {
-                    if (!date.equals(selectedDate)) {
-                        if (date.equals(LocalDate.now())) {
-                            dayBtn.setBackground(DesignSystem.PRIMARY_LIGHT);
-                        } else {
-                            dayBtn.setBackground(Color.WHITE);
-                        }
-                    }
-                }
-            });
-            
-            dayBtn.addActionListener(e -> {
-                selectedDate = date;
-                // Re-render to show selection
-                updateView();
-            });
-            
-            calendarPanel.add(dayBtn);
         }
-        
-        calendarPanel.revalidate();
-        calendarPanel.repaint();
     }
     
-    private JButton createArrowButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(DesignSystem.FONT_BODY_BOLD);
-        btn.setForeground(Color.WHITE);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
+    private void confirmSelection() {
+        int year = (Integer) yearCombo.getSelectedItem();
+        int month = monthCombo.getSelectedIndex() + 1;
+        int day = (Integer) dayCombo.getSelectedItem();
+        
+        selectedDate = LocalDate.of(year, month, day);
+        confirmed = true;
+        dispose();
+    }
+    
+    private void styleCombo(JComboBox<?> box) {
+        box.setFont(DesignSystem.FONT_BODY);
+        box.setBackground(Color.WHITE);
     }
     
     private void styleButton(JButton btn, Color bg, Color fg) {
@@ -244,6 +180,7 @@ public class DatePickerDialog extends JDialog {
         } else {
             btn.setBorderPainted(false);
         }
+        btn.setPreferredSize(new Dimension(80, 30));
     }
 
     public boolean isConfirmed() {

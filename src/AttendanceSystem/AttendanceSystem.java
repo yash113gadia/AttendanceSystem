@@ -239,6 +239,33 @@ public class AttendanceSystem {
         }
     }
     
+    /**
+     * Marks attendance for an event and ensures the session key is added to ALL students 
+     * in the same course to keep "Total Sessions" consistent.
+     */
+    public void markEventAttendance(String studentId, String sessionKey, boolean isPresent) {
+        Student targetStudent = findStudent(studentId);
+        if (targetStudent == null) return;
+        
+        String course = targetStudent.getCourse();
+        
+        // 1. Mark for target student
+        targetStudent.markAttendanceForSession(sessionKey, isPresent);
+        
+        // 2. Sync this key to ALL students in the same course (as Absent if missing)
+        // This ensures the "Total Sessions" count increases for everyone, not just the uploader.
+        for (int i = 0; i < studentCount; i++) {
+            Student s = students[i];
+            if (s.getCourse().equals(course)) {
+                if (!s.getSessionAttendance().containsKey(sessionKey)) {
+                    s.markAttendanceForSession(sessionKey, false); // Default to absent/not uploaded
+                }
+            }
+        }
+        
+        saveDataToFile();
+    }
+    
     public boolean removeStudent(String id) {
         for (int i = 0; i < studentCount; i++) {
             if (students[i].getId().equals(id)) {
@@ -354,18 +381,37 @@ public class AttendanceSystem {
     
     private void syncGlobalSessions() {
         boolean changed = false;
+        
+        // 1. Group students by Course
+        Map<String, List<Student>> courseStudents = new HashMap<>();
         for (int i = 0; i < studentCount; i++) {
-            Student s = students[i];
-            Set<String> keys = getPastSessionKeysForCourse(s.getCourse());
-            Map<String, Boolean> studentSessions = s.getSessionAttendance();
+            courseStudents.computeIfAbsent(students[i].getCourse(), k -> new ArrayList<>()).add(students[i]);
+        }
+        
+        // 2. Process each course
+        for (String course : courseStudents.keySet()) {
+            List<Student> studentsInCourse = courseStudents.get(course);
             
-            for (String key : keys) {
-                if (!studentSessions.containsKey(key)) {
-                    studentSessions.put(key, false);
-                    changed = true;
+            // A. Get Standard Keys from Timetable
+            Set<String> allKeys = getPastSessionKeysForCourse(course);
+            
+            // B. Collect Ad-Hoc Keys (Event-based) from students
+            for (Student s : studentsInCourse) {
+                allKeys.addAll(s.getSessionAttendance().keySet());
+            }
+            
+            // C. Sync to everyone
+            for (Student s : studentsInCourse) {
+                Map<String, Boolean> map = s.getSessionAttendance();
+                for (String key : allKeys) {
+                    if (!map.containsKey(key)) {
+                        map.put(key, false); // Default to Absent
+                        changed = true;
+                    }
                 }
             }
         }
+        
         if (changed) {
             saveDataToFile();
         }
@@ -560,6 +606,13 @@ public class AttendanceSystem {
         eventPhotos.add(photo);
         saveEventPhotos();
     }
+    
+    public void deleteEventPhoto(String eventId, String studentId, String filePath) {
+        eventPhotos.removeIf(p -> p.getEventId().equals(eventId) && 
+                                  p.getStudentId().equals(studentId) && 
+                                  p.getFilePath().equals(filePath));
+        saveEventPhotos();
+    }
 
     public List<EventPhoto> getPhotosForEvent(String eventId) {
         List<EventPhoto> result = new ArrayList<>();
@@ -587,6 +640,52 @@ public class AttendanceSystem {
         }
         saveEventPhotos();
     }
+    
+    public void deleteEvent(String eventId) {
+        // Find event to get affected sessions
+        Event event = null;
+        for (Event e : events) {
+            if (e.getId().equals(eventId)) {
+                event = e;
+                break;
+            }
+        }
+        
+        if (event != null && event.getAffectedSessions() != null && !event.getAffectedSessions().isEmpty()) {
+            String[] sessions = event.getAffectedSessions().split(",");
+            String date = event.getDate();
+            
+            // Remove these keys from ALL students
+            for (int i = 0; i < studentCount; i++) {
+                Student s = students[i];
+                for (String sKey : sessions) {
+                    String fullKey = date + "#" + sKey;
+                    s.getSessionAttendance().remove(fullKey);
+                }
+            }
+            // Save student data changes
+            saveDataToFile();
+        }
+        
+        events.removeIf(e -> e.getId().equals(eventId));
+        // Also remove associated photos
+        eventPhotos.removeIf(p -> p.getEventId().equals(eventId));
+        saveEvents();
+        saveEventPhotos();
+    }
+    
+    public void deleteAssignment(String assignmentId) {
+        assignments.removeIf(a -> a.getId().equals(assignmentId));
+        // Also remove associated submissions
+        submissions.removeIf(s -> s.getAssignmentId().equals(assignmentId));
+        saveAssignments();
+        saveSubmissions();
+    }
+    
+    public void deleteSubmission(String assignmentId, String studentId) {
+        submissions.removeIf(s -> s.getAssignmentId().equals(assignmentId) && s.getStudentId().equals(studentId));
+        saveSubmissions();
+    }
 
     private void saveEventPhotos() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(EVENT_PHOTOS_FILE))) {
@@ -611,5 +710,23 @@ public class AttendanceSystem {
         } catch (IOException e) {
             System.out.println("Error loading event photos: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Refreshes all data from files. 
+     * Call this periodically to get updates from other users.
+     */
+    public void reloadData() {
+        // Clear current state
+        studentCount = 0;
+        // Keep courseTimetables structure but clear students? 
+        // Actually, easiest is to just re-run loadDataFromFile.
+        // But we need to be careful about not losing unsaved changes.
+        // Assume save happens immediately on change, so this is safe.
+        
+        loadDataFromFile(); 
+        
+        // Also reload events/photos if needed, but for attendance specifically:
+        // We need to reload students.
     }
 }

@@ -3,6 +3,7 @@ package AttendanceSystem;
 import AttendanceSystem.ui.DesignSystem;
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
 /**
  * Modern login dialog with clean design.
@@ -23,110 +24,145 @@ public class LoginDialog extends JDialog {
     }
     
     private void initLoginComponents() {
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        mainPanel.setBackground(DesignSystem.BACKGROUND);
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
+        // Main Container using GridBagLayout for precise 50/50 split
+        JPanel mainPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
         
-        // Logo - custom drawn icon
-        JPanel logoPanel = new JPanel() {
+        // --- LEFT PANEL: Branding & Gradient ---
+        JPanel brandingPanel = new JPanel() {
+            private Image bgImage = null;
+            private boolean imageLoaded = false;
+
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 
-                int cx = getWidth() / 2;
-                int cy = getHeight() / 2;
+                int w = getWidth();
+                int h = getHeight();
                 
-                // Draw a graduation cap / book icon
-                g2.setColor(DesignSystem.PRIMARY);
-                g2.fillRoundRect(cx - 24, cy - 8, 48, 32, 8, 8);
-                g2.setColor(DesignSystem.PRIMARY_DARK);
-                g2.fillRoundRect(cx - 20, cy - 4, 40, 4, 2, 2);
-                g2.fillRoundRect(cx - 20, cy + 4, 40, 4, 2, 2);
-                g2.fillRoundRect(cx - 20, cy + 12, 40, 4, 2, 2);
+                // 1. Always draw Gradient Background
+                GradientPaint gp = new GradientPaint(0, 0, DesignSystem.PRIMARY_DARK, 
+                    w, h, DesignSystem.PRIMARY);
+                g2.setPaint(gp);
+                g2.fillRect(0, 0, w, h);
                 
-                // Checkmark overlay
-                g2.setColor(Color.WHITE);
-                g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawLine(cx - 8, cy + 2, cx - 2, cy + 8);
-                g2.drawLine(cx - 2, cy + 8, cx + 10, cy - 6);
+                // Decorative Circles
+                g2.setColor(new Color(255, 255, 255, 30));
+                g2.fillOval(-80, -80, 250, 250);
+                g2.fillOval(w - 100, h - 100, 200, 200);
+                
+                // 2. Load Logo Image (Lazy Load)
+                if (!imageLoaded) {
+                    try {
+                        File imgFile = new File("Logo/AttendEaselogo.png");
+                        if (imgFile.exists()) {
+                            bgImage = javax.imageio.ImageIO.read(imgFile);
+                        }
+                        imageLoaded = true;
+                    } catch (Exception e) {
+                        System.out.println("Failed to load logo: " + e.getMessage());
+                        imageLoaded = true;
+                    }
+                }
+
+                // 3. Draw Logo Centered (if loaded)
+                if (bgImage != null) {
+                    // Scale logo to fit nicely (Increased to 280px for prominence)
+                    int targetWidth = 280;
+                    double ratio = (double) bgImage.getHeight(null) / bgImage.getWidth(null);
+                    int targetHeight = (int) (targetWidth * ratio);
+                    
+                    int x = (w - targetWidth) / 2;
+                    int y = (h - targetHeight) / 2; // Perfectly centered vertically
+                    
+                    g2.drawImage(bgImage, x, y, targetWidth, targetHeight, null);
+                } else {
+                    // Fallback Text if logo missing
+                    g2.setColor(Color.WHITE);
+                    g2.setFont(new Font(DesignSystem.FONT_FAMILY, Font.BOLD, 32));
+                    String text = "AttendEase";
+                    FontMetrics fm = g2.getFontMetrics();
+                    g2.drawString(text, (w - fm.stringWidth(text)) / 2, h / 2);
+                }
                 
                 g2.dispose();
             }
-            
-            @Override
-            public Dimension getPreferredSize() {
-                return new Dimension(80, 60);
-            }
         };
-        logoPanel.setOpaque(false);
-        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(logoPanel);
+        // Use GridBagLayout to center contents if we added components, 
+        // but we are painting everything now, so just basic is fine.
+        brandingPanel.setLayout(new GridBagLayout()); 
         
-        mainPanel.add(Box.createVerticalStrut(16));
+        // No text labels added here anymore.
         
-        JLabel titleLabel = new JLabel("AttendEase");
-        titleLabel.setFont(new Font(DesignSystem.FONT_FAMILY, Font.BOLD, 28));
-        titleLabel.setForeground(DesignSystem.TEXT_PRIMARY);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(titleLabel);
+        // Add Branding to Main (Weight 0.4 = 40% width)
+        gbc.gridx = 0;
+        gbc.weightx = 0.4;
+        mainPanel.add(brandingPanel, gbc);
         
-        JLabel subtitleLabel = new JLabel("Attendance Management System");
-        subtitleLabel.setFont(DesignSystem.FONT_BODY);
-        subtitleLabel.setForeground(DesignSystem.TEXT_SECONDARY);
-        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(subtitleLabel);
+        // --- RIGHT PANEL: Login Form ---
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout()); // Center form vertically
+        formPanel.setBackground(Color.WHITE);
         
-        mainPanel.add(Box.createVerticalStrut(40));
+        JPanel formContent = new JPanel();
+        formContent.setLayout(new BoxLayout(formContent, BoxLayout.Y_AXIS));
+        formContent.setBackground(Color.WHITE);
+        formContent.setBorder(BorderFactory.createEmptyBorder(0, 40, 0, 40));
+        formContent.setMinimumSize(new Dimension(300, 400));
         
-        // Login card
-        JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(DesignSystem.SURFACE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), DesignSystem.RADIUS_LG, DesignSystem.RADIUS_LG);
-                g2.dispose();
-            }
-        };
-        card.setOpaque(false);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
-        card.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.setMaximumSize(new Dimension(340, 240));
+        JLabel loginTitle = new JLabel("Welcome Back");
+        loginTitle.setFont(new Font(DesignSystem.FONT_FAMILY, Font.BOLD, 26));
+        loginTitle.setForeground(DesignSystem.TEXT_PRIMARY);
+        loginTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formContent.add(loginTitle);
         
-        // Username field
-        JLabel userLabel = new JLabel("Username");
+        formContent.add(Box.createVerticalStrut(5));
+        
+        JLabel loginSub = new JLabel("Please sign in to continue.");
+        loginSub.setFont(DesignSystem.FONT_BODY);
+        loginSub.setForeground(DesignSystem.TEXT_SECONDARY);
+        loginSub.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formContent.add(loginSub);
+        
+        formContent.add(Box.createVerticalStrut(30));
+        
+        // Username
+        JLabel userLabel = new JLabel("Username / Student ID");
         userLabel.setFont(DesignSystem.FONT_BODY_BOLD);
         userLabel.setForeground(DesignSystem.TEXT_PRIMARY);
         userLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(userLabel);
+        formContent.add(userLabel);
         
-        card.add(Box.createVerticalStrut(8));
+        formContent.add(Box.createVerticalStrut(8));
         
-        usernameField = createStyledTextField();
-        card.add(usernameField);
+        usernameField = DesignSystem.createStyledTextField();
+        usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        formContent.add(usernameField);
         
-        card.add(Box.createVerticalStrut(16));
+        formContent.add(Box.createVerticalStrut(20));
         
-        // Password field
+        // Password
         JLabel passLabel = new JLabel("Password");
         passLabel.setFont(DesignSystem.FONT_BODY_BOLD);
         passLabel.setForeground(DesignSystem.TEXT_PRIMARY);
         passLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(passLabel);
+        formContent.add(passLabel);
         
-        card.add(Box.createVerticalStrut(8));
+        formContent.add(Box.createVerticalStrut(8));
         
-        passwordField = createStyledPasswordField();
-        card.add(passwordField);
+        passwordField = DesignSystem.createStyledPasswordField();
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        formContent.add(passwordField);
         
-        card.add(Box.createVerticalStrut(24));
+        formContent.add(Box.createVerticalStrut(30));
         
-        // Login button
+        // Login Button
         JButton loginButton = new JButton("Sign In") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -141,11 +177,20 @@ public class LoginDialog extends JDialog {
                     g2.setColor(DesignSystem.PRIMARY);
                 }
                 
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), DesignSystem.RADIUS_MD, DesignSystem.RADIUS_MD);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                
+                // Text drawing
+                g2.setColor(Color.WHITE);
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), x, y);
+                
                 g2.dispose();
-                super.paintComponent(g);
             }
         };
+        loginButton.setText("Sign In"); // Ensure text is set for custom paint
         loginButton.setFont(DesignSystem.FONT_BUTTON);
         loginButton.setForeground(Color.WHITE);
         loginButton.setContentAreaFilled(false);
@@ -153,55 +198,22 @@ public class LoginDialog extends JDialog {
         loginButton.setFocusPainted(false);
         loginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         loginButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        loginButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        loginButton.setPreferredSize(new Dimension(300, 44));
+        loginButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
         loginButton.addActionListener(e -> performLogin());
-        card.add(loginButton);
+        formContent.add(loginButton);
         
-        mainPanel.add(card);
+        formPanel.add(formContent); // Centered
         
-        mainPanel.add(Box.createVerticalStrut(24));
-        
-        // Footer hint
-        JLabel hintLabel = new JLabel("Contact admin for credentials");
-        hintLabel.setFont(DesignSystem.FONT_SMALL);
-        hintLabel.setForeground(DesignSystem.TEXT_MUTED);
-        hintLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(hintLabel);
-        
-        // Key listeners
-        passwordField.addActionListener(e -> performLogin());
-        usernameField.addActionListener(e -> passwordField.requestFocus());
+        // Add Form to Main (Weight 0.6 = 60% width)
+        gbc.gridx = 1;
+        gbc.weightx = 0.6;
+        mainPanel.add(formPanel, gbc);
         
         add(mainPanel);
-    }
-    
-    private JTextField createStyledTextField() {
-        JTextField field = new JTextField();
-        field.setFont(DesignSystem.FONT_BODY);
-        field.setForeground(DesignSystem.TEXT_PRIMARY);
-        field.setBackground(DesignSystem.SURFACE);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(DesignSystem.BORDER, 1),
-            BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        return field;
-    }
-    
-    private JPasswordField createStyledPasswordField() {
-        JPasswordField field = new JPasswordField();
-        field.setFont(DesignSystem.FONT_BODY);
-        field.setForeground(DesignSystem.TEXT_PRIMARY);
-        field.setBackground(DesignSystem.SURFACE);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(DesignSystem.BORDER, 1),
-            BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        return field;
+        
+        // Set Size
+        setSize(850, 500);
+        setLocationRelativeTo(getParent());
     }
     
     private void performLogin() {

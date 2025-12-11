@@ -332,12 +332,14 @@ public class StudentActions {
             for (Student s : students) {
                 double percentage = s.getAttendancePercentage();
                 String status;
-                if (percentage >= 70) {
+                if (percentage > 80) {
+                    status = "Excellent";
+                } else if (percentage >= 70) {
+                    status = "Good";
+                } else if (percentage >= 60) {
                     status = "Warning";
-                } else if (percentage >= 50) {
-                    status = "Critical";
                 } else {
-                    status = "Very Critical";
+                    status = "Critical";
                 }
                 
                 writer.printf("%s,%s,\"%s\",%d,%d,%.2f%%,%s\n",

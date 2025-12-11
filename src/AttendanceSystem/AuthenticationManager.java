@@ -26,10 +26,10 @@ public class AuthenticationManager {
         
         // Add default admin users if they don't exist
         if (!users.containsKey("YASHGADIA")) {
-            users.put("YASHGADIA", new User("YASHGADIA", "9v2vcurog", "ADMIN", new String[]{}));
+            users.put("YASHGADIA", new User("YASHGADIA", hashPassword("9v2vcurog"), "ADMIN", new String[]{}));
         }
         if (!users.containsKey("SWETAKUMARI")) {
-            users.put("SWETAKUMARI", new User("SWETAKUMARI", "ChocoLava", "ADMIN", new String[]{}));
+            users.put("SWETAKUMARI", new User("SWETAKUMARI", hashPassword("ChocoLava"), "ADMIN", new String[]{}));
         }
         
         // Add default teacher users if they don't exist
@@ -60,8 +60,19 @@ public class AuthenticationManager {
     public static User authenticate(String username, String password) {
         // 1. Check existing Admin/Teacher users
         User user = users.get(username.toUpperCase());
-        if (user != null && user.getPassword().equals(password)) {
-            return user;
+        if (user != null) {
+            String storedPass = user.getPassword();
+            String inputHash = hashPassword(password);
+            
+            // Check if stored pass is the hash of input OR (legacy) plain text
+            if (storedPass.equals(inputHash)) {
+                return user;
+            } else if (storedPass.equals(password)) {
+                // Auto-migrate legacy plain text to hash
+                user.setPassword(inputHash);
+                saveUsersToFile();
+                return user;
+            }
         }
         
         // 2. Check for Student (Simulated Login)
@@ -82,6 +93,8 @@ public class AuthenticationManager {
                         if (studentId.equalsIgnoreCase(username)) {
                             // Validate password
                             String expectedPass = studentId + "123";
+                            // Students typically don't have stored hashes in this simple file system yet.
+                            // We verify against the rule.
                             if (password.equals(expectedPass)) {
                                 User studentUser = new User(studentName, password, "STUDENT", new String[]{course});
                                 studentUser.setStudentId(studentId);
@@ -128,12 +141,12 @@ public class AuthenticationManager {
         }
         
         // Create new teacher with password = username123
-        String password = upperUsername.toLowerCase() + "123";
-        User newTeacher = new User(upperUsername, password, "TEACHER", new String[]{subject});
+        String rawPassword = upperUsername.toLowerCase() + "123";
+        User newTeacher = new User(upperUsername, hashPassword(rawPassword), "TEACHER", new String[]{subject});
         users.put(upperUsername, newTeacher);
         saveUsersToFile();
         
-        System.out.println("New teacher created: " + upperUsername + " / " + password);
+        System.out.println("New teacher created: " + upperUsername + " / " + rawPassword);
         return true;
     }
     
@@ -156,13 +169,37 @@ public class AuthenticationManager {
         User user = users.get(username.toUpperCase());
         if (user == null) return false;
         
-        if (!user.getPassword().equals(oldPassword)) {
+        String storedPass = user.getPassword();
+        String oldHash = hashPassword(oldPassword);
+        
+        // Verify old password (check hash OR plain)
+        if (!storedPass.equals(oldHash) && !storedPass.equals(oldPassword)) {
             return false;
         }
         
-        user.setPassword(newPassword);
+        // Save new password as hash
+        user.setPassword(hashPassword(newPassword));
         saveUsersToFile();
         return true;
+    }
+    
+    private static String hashPassword(String password) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * encodedhash.length);
+            for (int i = 0; i < encodedhash.length; i++) {
+                String hex = Integer.toHexString(0xff & encodedhash[i]);
+                if(hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return password; // Fallback (should not happen)
+        }
     }
     
     private static void loadUsersFromFile() {

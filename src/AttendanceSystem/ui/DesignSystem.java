@@ -166,32 +166,65 @@ public class DesignSystem {
     }
     
     /**
-     * Create a styled text field
+     * Create a styled text field with rounded corners and hover effect.
      */
-    public static JTextField createTextField(String placeholder) {
+    public static JTextField createStyledTextField() {
         JTextField field = new JTextField() {
             @Override
             protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS_MD, RADIUS_MD);
+                
+                // Draw border
+                g2.setColor(hasFocus() ? PRIMARY : BORDER);
+                g2.setStroke(new BasicStroke(hasFocus() ? 2 : 1));
+                g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, RADIUS_MD, RADIUS_MD);
+                
+                g2.dispose();
                 super.paintComponent(g);
-                if (getText().isEmpty() && !hasFocus()) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setColor(TEXT_MUTED);
-                    g2.setFont(FONT_BODY);
-                    g2.drawString(placeholder, getInsets().left, 
-                        getHeight() / 2 + g2.getFontMetrics().getAscent() / 2 - 2);
-                    g2.dispose();
-                }
             }
         };
         
-        field.setFont(FONT_BODY);
+        field.setOpaque(false); // Important for custom painting
+        field.setBackground(Color.WHITE);
         field.setForeground(TEXT_PRIMARY);
-        field.setBackground(SURFACE);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER, 1),
-            BorderFactory.createEmptyBorder(SPACING_SM, SPACING_MD, SPACING_SM, SPACING_MD)
-        ));
-        field.setPreferredSize(new Dimension(250, 40));
+        field.setFont(FONT_BODY);
+        field.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // Padding for text
+        
+        return field;
+    }
+    
+    /**
+     * Create a styled password field with rounded corners.
+     */
+    public static JPasswordField createStyledPasswordField() {
+        JPasswordField field = new JPasswordField() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS_MD, RADIUS_MD);
+                
+                g2.setColor(hasFocus() ? PRIMARY : BORDER);
+                g2.setStroke(new BasicStroke(hasFocus() ? 2 : 1));
+                g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, RADIUS_MD, RADIUS_MD);
+                
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        
+        field.setOpaque(false);
+        field.setBackground(Color.WHITE);
+        field.setForeground(TEXT_PRIMARY);
+        field.setFont(FONT_BODY);
+        field.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         
         return field;
     }

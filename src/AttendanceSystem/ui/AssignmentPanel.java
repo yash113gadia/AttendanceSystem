@@ -38,6 +38,11 @@ public class AssignmentPanel extends BasePanel {
             JButton createBtn = DesignSystem.createButton("Create Assignment", DesignSystem.PRIMARY);
             createBtn.addActionListener(e -> showCreateDialog());
             toolbar.add(createBtn);
+            
+            JButton deleteAssignBtn = DesignSystem.createButton("Delete Assignment", DesignSystem.DANGER);
+            deleteAssignBtn.addActionListener(e -> deleteSelectedAssignment());
+            toolbar.add(Box.createHorizontalStrut(10));
+            toolbar.add(deleteAssignBtn);
         } else if ("STUDENT".equals(currentUser.getRole())) {
             JButton uploadBtn = DesignSystem.createButton("Upload Submission", DesignSystem.PRIMARY);
             uploadBtn.addActionListener(e -> showUploadDialog());
@@ -93,12 +98,15 @@ public class AssignmentPanel extends BasePanel {
         actionPanel.setBackground(Color.WHITE);
         JButton approveBtn = DesignSystem.createButton("Approve", DesignSystem.SUCCESS);
         JButton rejectBtn = DesignSystem.createButton("Reject", DesignSystem.DANGER);
+        JButton deleteSubBtn = DesignSystem.createButton("Delete Submission", DesignSystem.DANGER); // NEW
         
         approveBtn.addActionListener(e -> processSubmission("APPROVED"));
         rejectBtn.addActionListener(e -> processSubmission("REJECTED"));
+        deleteSubBtn.addActionListener(e -> deleteSelectedSubmission());
         
         actionPanel.add(approveBtn);
         actionPanel.add(rejectBtn);
+        actionPanel.add(deleteSubBtn);
         
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.add(subScroll, BorderLayout.CENTER);
@@ -108,6 +116,49 @@ public class AssignmentPanel extends BasePanel {
         splitPane.setDividerLocation(500);
         splitPane.setResizeWeight(0.5);
         add(splitPane, BorderLayout.CENTER);
+    }
+    
+    private void deleteSelectedAssignment() {
+        int row = assignmentTable.getSelectedRow();
+        if (row == -1) {
+            showError("Please select an assignment to delete.");
+            return;
+        }
+        
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "Are you sure? This will delete the assignment and ALL associated submissions.",
+            "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            
+        if (confirm == JOptionPane.YES_OPTION) {
+            String assignId = (String) assignmentModel.getValueAt(row, 0);
+            system.deleteAssignment(assignId);
+            refreshData();
+            submissionModel.setRowCount(0); // Clear detail view
+            showSuccess("Assignment deleted.");
+        }
+    }
+    
+    private void deleteSelectedSubmission() {
+        int subRow = submissionTable.getSelectedRow();
+        int assignRow = assignmentTable.getSelectedRow();
+        
+        if (subRow == -1 || assignRow == -1) {
+            showError("Please select a submission to delete.");
+            return;
+        }
+        
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "Are you sure you want to delete this submission?",
+            "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            
+        if (confirm == JOptionPane.YES_OPTION) {
+            String assignId = (String) assignmentModel.getValueAt(assignRow, 0);
+            String studentId = (String) submissionModel.getValueAt(subRow, 0);
+            
+            system.deleteSubmission(assignId, studentId);
+            loadSubmissionsForSelected();
+            showSuccess("Submission deleted.");
+        }
     }
 
     private void setupStudentView() {
